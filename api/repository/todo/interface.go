@@ -11,8 +11,10 @@ import (
 const (
 	tag = `[TodoRepository]`
 
-	tracingStore   = "Store"
-	tracingFindAll = "FindAll"
+	tracingStore       = "Store"
+	tracingFindAll     = "FindAll"
+	tracingFindOneByID = "FindOneByID"
+	tracingUpdateByID  = "UpdateByID"
 )
 
 type (
@@ -20,6 +22,8 @@ type (
 		GetTableName() string
 		Store(ctx context.Context, db infrastructure.Querier, input *database.Todo) error
 		FindAll(ctx context.Context, db infrastructure.Querier) ([]*database.Todo, error)
+		FindOneByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (*database.Todo, error)
+		UpdateByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error
 	}
 	repository struct {
 		logger *zap.Logger
