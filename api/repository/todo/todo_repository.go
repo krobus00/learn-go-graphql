@@ -33,7 +33,7 @@ func (r *repository) FindAll(ctx context.Context, db infrastructure.Querier) ([]
 
 	results := make([]*database.Todo, 0)
 
-	query, args, err := r.buildSelectQuery().ToSql()
+	query, args, err := r.buildSelectQuery(nil).ToSql()
 	if err != nil {
 		util.ErrorLogger(r.logger, tag, tracingFindAll, err)
 		return results, err
@@ -54,7 +54,7 @@ func (r *repository) FindOneByID(ctx context.Context, db infrastructure.Querier,
 
 	result := new(database.Todo)
 
-	query, args, err := r.buildSelectQuery().Where(squirrel.Eq{
+	query, args, err := r.buildSelectQuery(input).Where(squirrel.Eq{
 		"id": input.ID,
 	}).ToSql()
 	if err != nil {
@@ -89,6 +89,48 @@ func (r *repository) UpdateByID(ctx context.Context, db infrastructure.Querier, 
 	_, err = db.ExecContext(ctx, query, args...)
 	if err != nil {
 		util.ErrorLogger(r.logger, tag, tracingUpdateByID, err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *repository) SoftDeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error {
+	segment := util.StartTracer(ctx, tag, tracingSoftDeleteByID)
+	defer segment.End()
+
+	query, args, err := r.buildSoftDeleteQuery(input).Where(squirrel.Eq{
+		"id": input.ID,
+	}).ToSql()
+	if err != nil {
+		util.ErrorLogger(r.logger, tag, tracingSoftDeleteByID, err)
+		return err
+	}
+
+	_, err = db.ExecContext(ctx, query, args...)
+	if err != nil {
+		util.ErrorLogger(r.logger, tag, tracingSoftDeleteByID, err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *repository) DeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error {
+	segment := util.StartTracer(ctx, tag, tracingDeleteByID)
+	defer segment.End()
+
+	query, args, err := r.buildDeleteQuery(input).Where(squirrel.Eq{
+		"id": input.ID,
+	}).ToSql()
+	if err != nil {
+		util.ErrorLogger(r.logger, tag, tracingDeleteByID, err)
+		return err
+	}
+
+	_, err = db.ExecContext(ctx, query, args...)
+	if err != nil {
+		util.ErrorLogger(r.logger, tag, tracingDeleteByID, err)
 		return err
 	}
 

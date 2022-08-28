@@ -11,10 +11,12 @@ import (
 const (
 	tag = `[TodoRepository]`
 
-	tracingStore       = "Store"
-	tracingFindAll     = "FindAll"
-	tracingFindOneByID = "FindOneByID"
-	tracingUpdateByID  = "UpdateByID"
+	tracingStore          = "Store"
+	tracingFindAll        = "FindAll"
+	tracingFindOneByID    = "FindOneByID"
+	tracingUpdateByID     = "UpdateByID"
+	tracingSoftDeleteByID = "SoftDeleteByID"
+	tracingDeleteByID     = "DeleteByID"
 )
 
 type (
@@ -24,6 +26,8 @@ type (
 		FindAll(ctx context.Context, db infrastructure.Querier) ([]*database.Todo, error)
 		FindOneByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (*database.Todo, error)
 		UpdateByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error
+		SoftDeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error
+		DeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error
 	}
 	repository struct {
 		logger *zap.Logger

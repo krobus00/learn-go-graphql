@@ -18,6 +18,12 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 
+// DeleteTodoByID implements generated.MutationResolver
+func (r *mutationResolver) DeleteTodoByID(ctx context.Context, input model.DeleteTodoByIDRequest) (bool, error) {
+	isSuccess, err := r.Service.TodoService.Delete(ctx, &input)
+	return isSuccess, err
+}
+
 // CreateTodo is the resolver for the createTodo field.
 func (r *mutationResolver) CreateTodo(ctx context.Context, input model.CreateTodoRequest) (*model.CreateTodoResponse, error) {
 	resp, err := r.Service.TodoService.Store(ctx, &input)
@@ -25,8 +31,8 @@ func (r *mutationResolver) CreateTodo(ctx context.Context, input model.CreateTod
 }
 
 // UpdateTodoByID implements generated.MutationResolver
-func (mr *mutationResolver) UpdateTodoByID(ctx context.Context, input model.UpdateTodoByIDRequest) (*model.Todo, error) {
-	todo, err := mr.Service.TodoService.Update(ctx, &input)
+func (r *mutationResolver) UpdateTodoByID(ctx context.Context, input model.UpdateTodoByIDRequest) (*model.Todo, error) {
+	todo, err := r.Service.TodoService.Update(ctx, &input)
 	return todo, err
 }
 
@@ -40,7 +46,7 @@ func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
 }
 
 // TodoByID implements generated.QueryResolver
-func (qr *queryResolver) TodoByID(ctx context.Context, input model.GetTodoByIDRequest) (*model.Todo, error) {
-	todo, err := qr.Service.TodoService.Show(ctx, &input)
+func (r *queryResolver) TodoByID(ctx context.Context, input model.GetTodoByIDRequest) (*model.Todo, error) {
+	todo, err := r.Service.TodoService.Show(ctx, &input)
 	return todo, err
 }

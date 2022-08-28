@@ -21,6 +21,11 @@ func (r *mutationResolver) UpdateTodoByID(ctx context.Context, input model.Updat
 	panic(fmt.Errorf("not implemented: UpdateTodoByID - updateTodoByID"))
 }
 
+// DeleteTodoByID is the resolver for the deleteTodoByID field.
+func (r *mutationResolver) DeleteTodoByID(ctx context.Context, input model.DeleteTodoByIDRequest) (bool, error) {
+	panic(fmt.Errorf("not implemented: DeleteTodoByID - deleteTodoByID"))
+}
+
 // Todos is the resolver for the todos field.
 func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
 	panic(fmt.Errorf("not implemented: Todos - todos"))

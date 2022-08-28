@@ -5,7 +5,7 @@
 type Todo {
   id: ID!
   text: String!
-  is_done: Boolean!
+  isDone: Boolean!
 }
 input GetTodoByIDRequest {
     id: ID!
@@ -26,10 +26,16 @@ type CreateTodoResponse {
 input UpdateTodoByIDRequest {
     id: ID!
     text: String!
-    is_done: Boolean!
+    isDone: Boolean!
+}
+
+input DeleteTodoByIDRequest {
+    id: ID!
+    isHardDelete: Boolean
 }
 
 type Mutation {
   createTodo(input: CreateTodoRequest!): CreateTodoResponse!
   updateTodoByID(input: UpdateTodoByIDRequest!): Todo!
+  deleteTodoByID(input: DeleteTodoByIDRequest!): Boolean!
 }

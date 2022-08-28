@@ -38,7 +38,12 @@ func (r *repository) buildSoftDeleteQuery(input *database.Todo) sq.UpdateBuilder
 	return updateBuilder
 }
 
-func (r *repository) buildSelectQuery() sq.SelectBuilder {
+func (r *repository) buildDeleteQuery(input *database.Todo) sq.DeleteBuilder {
+	deleteBuilder := sq.Delete(r.GetTableName())
+	return deleteBuilder
+}
+
+func (r *repository) buildSelectQuery(input *database.Todo) sq.SelectBuilder {
 	selection := []string{
 		"id",
 		"text",
@@ -47,6 +52,9 @@ func (r *repository) buildSelectQuery() sq.SelectBuilder {
 		"updated_at",
 		"deleted_at",
 	}
-	selectBuilder := sq.Select(selection...).Where(sq.Eq{"deleted_at": nil}).From(r.GetTableName())
+	selectBuilder := sq.Select(selection...).From(r.GetTableName())
+	if input != nil && !input.IncludeSoftDelete {
+		selectBuilder = selectBuilder.Where(sq.Eq{"deleted_at": nil})
+	}
 	return selectBuilder
 }

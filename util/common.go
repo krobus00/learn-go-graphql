@@ -16,3 +16,10 @@ func WhitelistSanitize(str string, whitelist map[string]string) string {
 	}
 	return str
 }
+
+func PointerBoolToBool(input *bool) bool {
+	if input != nil && *input {
+		return true
+	}
+	return false
+}
