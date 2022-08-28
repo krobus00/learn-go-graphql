@@ -121,3 +121,37 @@ func (svc *service) Update(ctx context.Context, payload *model.UpdateTodoByIDReq
 	}
 	return result, nil
 }
+
+func (svc *service) Delete(ctx context.Context, payload *model.DeleteTodoByIDRequest) (bool, error) {
+	segment := util.StartTracer(ctx, tag, tracingDelete)
+	defer segment.End()
+
+	input := &database.Todo{
+		ID: payload.ID,
+		BaseData: database.BaseData{
+			IncludeSoftDelete: util.PointerBoolToBool(payload.IsHardDelete),
+		},
+	}
+
+	todo, err := svc.repository.TodoRepostory.FindOneByID(ctx, svc.db, input)
+	if err != nil {
+		return false, err
+	}
+	if todo == nil {
+		return false, errors.New("todo not found")
+	}
+
+	if util.PointerBoolToBool(payload.IsHardDelete) {
+		err = svc.repository.TodoRepostory.DeleteByID(ctx, svc.db, input)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	err = svc.repository.TodoRepostory.SoftDeleteByID(ctx, svc.db, input)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

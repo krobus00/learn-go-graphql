@@ -10,6 +10,11 @@ type CreateTodoResponse struct {
 	ID string `json:"id"`
 }
 
+type DeleteTodoByIDRequest struct {
+	ID           string `json:"id"`
+	IsHardDelete *bool  `json:"isHardDelete"`
+}
+
 type GetTodoByIDRequest struct {
 	ID string `json:"id"`
 }
@@ -17,11 +22,11 @@ type GetTodoByIDRequest struct {
 type Todo struct {
 	ID     string `json:"id"`
 	Text   string `json:"text"`
-	IsDone bool   `json:"is_done"`
+	IsDone bool   `json:"isDone"`
 }
 
 type UpdateTodoByIDRequest struct {
 	ID     string `json:"id"`
 	Text   string `json:"text"`
-	IsDone bool   `json:"is_done"`
+	IsDone bool   `json:"isDone"`
 }

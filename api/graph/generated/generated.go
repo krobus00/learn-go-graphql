@@ -50,6 +50,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		CreateTodo     func(childComplexity int, input model.CreateTodoRequest) int
+		DeleteTodoByID func(childComplexity int, input model.DeleteTodoByIDRequest) int
 		UpdateTodoByID func(childComplexity int, input model.UpdateTodoByIDRequest) int
 	}
 
@@ -68,6 +69,7 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	CreateTodo(ctx context.Context, input model.CreateTodoRequest) (*model.CreateTodoResponse, error)
 	UpdateTodoByID(ctx context.Context, input model.UpdateTodoByIDRequest) (*model.Todo, error)
+	DeleteTodoByID(ctx context.Context, input model.DeleteTodoByIDRequest) (bool, error)
 }
 type QueryResolver interface {
 	Todos(ctx context.Context) ([]*model.Todo, error)
@@ -108,6 +110,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.CreateTodo(childComplexity, args["input"].(model.CreateTodoRequest)), true
 
+	case "Mutation.deleteTodoByID":
+		if e.complexity.Mutation.DeleteTodoByID == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteTodoByID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteTodoByID(childComplexity, args["input"].(model.DeleteTodoByIDRequest)), true
+
 	case "Mutation.updateTodoByID":
 		if e.complexity.Mutation.UpdateTodoByID == nil {
 			break
@@ -146,7 +160,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Todo.ID(childComplexity), true
 
-	case "Todo.is_done":
+	case "Todo.isDone":
 		if e.complexity.Todo.IsDone == nil {
 			break
 		}
@@ -169,6 +183,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputCreateTodoRequest,
+		ec.unmarshalInputDeleteTodoByIDRequest,
 		ec.unmarshalInputGetTodoByIDRequest,
 		ec.unmarshalInputUpdateTodoByIDRequest,
 	)
@@ -238,7 +253,7 @@ var sources = []*ast.Source{
 type Todo {
   id: ID!
   text: String!
-  is_done: Boolean!
+  isDone: Boolean!
 }
 input GetTodoByIDRequest {
     id: ID!
@@ -259,12 +274,18 @@ type CreateTodoResponse {
 input UpdateTodoByIDRequest {
     id: ID!
     text: String!
-    is_done: Boolean!
+    isDone: Boolean!
+}
+
+input DeleteTodoByIDRequest {
+    id: ID!
+    isHardDelete: Boolean
 }
 
 type Mutation {
   createTodo(input: CreateTodoRequest!): CreateTodoResponse!
   updateTodoByID(input: UpdateTodoByIDRequest!): Todo!
+  deleteTodoByID(input: DeleteTodoByIDRequest!): Boolean!
 }
 `, BuiltIn: false},
 }
@@ -281,6 +302,21 @@ func (ec *executionContext) field_Mutation_createTodo_args(ctx context.Context, 
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
 		arg0, err = ec.unmarshalNCreateTodoRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐCreateTodoRequest(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteTodoByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.DeleteTodoByIDRequest
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNDeleteTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐDeleteTodoByIDRequest(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -518,8 +554,8 @@ func (ec *executionContext) fieldContext_Mutation_updateTodoByID(ctx context.Con
 				return ec.fieldContext_Todo_id(ctx, field)
 			case "text":
 				return ec.fieldContext_Todo_text(ctx, field)
-			case "is_done":
-				return ec.fieldContext_Todo_is_done(ctx, field)
+			case "isDone":
+				return ec.fieldContext_Todo_isDone(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Todo", field.Name)
 		},
@@ -532,6 +568,61 @@ func (ec *executionContext) fieldContext_Mutation_updateTodoByID(ctx context.Con
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_updateTodoByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteTodoByID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteTodoByID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteTodoByID(rctx, fc.Args["input"].(model.DeleteTodoByIDRequest))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteTodoByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteTodoByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -581,8 +672,8 @@ func (ec *executionContext) fieldContext_Query_todos(ctx context.Context, field 
 				return ec.fieldContext_Todo_id(ctx, field)
 			case "text":
 				return ec.fieldContext_Todo_text(ctx, field)
-			case "is_done":
-				return ec.fieldContext_Todo_is_done(ctx, field)
+			case "isDone":
+				return ec.fieldContext_Todo_isDone(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Todo", field.Name)
 		},
@@ -630,8 +721,8 @@ func (ec *executionContext) fieldContext_Query_todoByID(ctx context.Context, fie
 				return ec.fieldContext_Todo_id(ctx, field)
 			case "text":
 				return ec.fieldContext_Todo_text(ctx, field)
-			case "is_done":
-				return ec.fieldContext_Todo_is_done(ctx, field)
+			case "isDone":
+				return ec.fieldContext_Todo_isDone(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Todo", field.Name)
 		},
@@ -867,8 +958,8 @@ func (ec *executionContext) fieldContext_Todo_text(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Todo_is_done(ctx context.Context, field graphql.CollectedField, obj *model.Todo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Todo_is_done(ctx, field)
+func (ec *executionContext) _Todo_isDone(ctx context.Context, field graphql.CollectedField, obj *model.Todo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Todo_isDone(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -898,7 +989,7 @@ func (ec *executionContext) _Todo_is_done(ctx context.Context, field graphql.Col
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Todo_is_done(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Todo_isDone(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Todo",
 		Field:      field,
@@ -2712,6 +2803,42 @@ func (ec *executionContext) unmarshalInputCreateTodoRequest(ctx context.Context,
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputDeleteTodoByIDRequest(ctx context.Context, obj interface{}) (model.DeleteTodoByIDRequest, error) {
+	var it model.DeleteTodoByIDRequest
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "isHardDelete"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			it.ID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "isHardDelete":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isHardDelete"))
+			it.IsHardDelete, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputGetTodoByIDRequest(ctx context.Context, obj interface{}) (model.GetTodoByIDRequest, error) {
 	var it model.GetTodoByIDRequest
 	asMap := map[string]interface{}{}
@@ -2747,7 +2874,7 @@ func (ec *executionContext) unmarshalInputUpdateTodoByIDRequest(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"id", "text", "is_done"}
+	fieldsInOrder := [...]string{"id", "text", "isDone"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -2770,10 +2897,10 @@ func (ec *executionContext) unmarshalInputUpdateTodoByIDRequest(ctx context.Cont
 			if err != nil {
 				return it, err
 			}
-		case "is_done":
+		case "isDone":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("is_done"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isDone"))
 			it.IsDone, err = ec.unmarshalNBoolean2bool(ctx, v)
 			if err != nil {
 				return it, err
@@ -2852,6 +2979,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateTodoByID(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteTodoByID":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteTodoByID(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -2977,9 +3113,9 @@ func (ec *executionContext) _Todo(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "is_done":
+		case "isDone":
 
-			out.Values[i] = ec._Todo_is_done(ctx, field, obj)
+			out.Values[i] = ec._Todo_isDone(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -3345,6 +3481,11 @@ func (ec *executionContext) marshalNCreateTodoResponse2ᚖgithubᚗcomᚋkrobus0
 		return graphql.Null
 	}
 	return ec._CreateTodoResponse(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNDeleteTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐDeleteTodoByIDRequest(ctx context.Context, v interface{}) (model.DeleteTodoByIDRequest, error) {
+	res, err := ec.unmarshalInputDeleteTodoByIDRequest(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNGetTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐGetTodoByIDRequest(ctx context.Context, v interface{}) (model.GetTodoByIDRequest, error) {
