@@ -7,12 +7,15 @@ type Todo {
   text: String!
   is_done: Boolean!
 }
-
+input GetTodoByIDRequest {
+    id: ID!
+}
 type Query {
   todos: [Todo!]!
+  todoByID(input: GetTodoByIDRequest!):Todo
 }
 
-input NewTodo {
+input CreateTodoRequest {
   text: String!
 }
 
@@ -20,6 +23,13 @@ type CreateTodoResponse {
     id: ID!
 }
 
+input UpdateTodoByIDRequest {
+    id: ID!
+    text: String!
+    is_done: Boolean!
+}
+
 type Mutation {
-  createTodo(input: NewTodo!): CreateTodoResponse!
+  createTodo(input: CreateTodoRequest!): CreateTodoResponse!
+  updateTodoByID(input: UpdateTodoByIDRequest!): Todo!
 }

@@ -2,15 +2,25 @@
 
 package model
 
+type CreateTodoRequest struct {
+	Text string `json:"text"`
+}
+
 type CreateTodoResponse struct {
 	ID string `json:"id"`
 }
 
-type NewTodo struct {
-	Text string `json:"text"`
+type GetTodoByIDRequest struct {
+	ID string `json:"id"`
 }
 
 type Todo struct {
+	ID     string `json:"id"`
+	Text   string `json:"text"`
+	IsDone bool   `json:"is_done"`
+}
+
+type UpdateTodoByIDRequest struct {
 	ID     string `json:"id"`
 	Text   string `json:"text"`
 	IsDone bool   `json:"is_done"`
