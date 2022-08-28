@@ -3,7 +3,6 @@ package todo
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/krobus00/learn-go-graphql/api/model"
 	"github.com/krobus00/learn-go-graphql/api/model/database"
