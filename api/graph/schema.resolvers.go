@@ -31,9 +31,9 @@ func (r *mutationResolver) CreateTodo(ctx context.Context, input model.CreateTod
 }
 
 // UpdateTodoByID implements generated.MutationResolver
-func (r *mutationResolver) UpdateTodoByID(ctx context.Context, input model.UpdateTodoByIDRequest) (*model.Todo, error) {
-	todo, err := r.Service.TodoService.Update(ctx, &input)
-	return todo, err
+func (r *mutationResolver) UpdateTodoByID(ctx context.Context, input model.UpdateTodoByIDRequest) (bool, error) {
+	isSuccess, err := r.Service.TodoService.Update(ctx, &input)
+	return isSuccess, err
 }
 
 type queryResolver struct{ *Resolver }

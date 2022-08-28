@@ -74,7 +74,7 @@ func (r *repository) FindOneByID(ctx context.Context, db infrastructure.Querier,
 	return result, nil
 }
 
-func (r *repository) UpdateByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error {
+func (r *repository) UpdateByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (int64, error) {
 	segment := util.StartTracer(ctx, tag, tracingUpdateByID)
 	defer segment.End()
 
@@ -83,19 +83,24 @@ func (r *repository) UpdateByID(ctx context.Context, db infrastructure.Querier, 
 	}).ToSql()
 	if err != nil {
 		util.ErrorLogger(r.logger, tag, tracingUpdateByID, err)
-		return err
+		return 0, err
 	}
 
-	_, err = db.ExecContext(ctx, query, args...)
+	row, err := db.ExecContext(ctx, query, args...)
 	if err != nil {
 		util.ErrorLogger(r.logger, tag, tracingUpdateByID, err)
-		return err
+		return 0, err
+	}
+	rowsAffected, err := row.RowsAffected()
+	if err != nil {
+		util.ErrorLogger(r.logger, tag, tracingUpdateByID, err)
+		return 0, err
 	}
 
-	return nil
+	return rowsAffected, nil
 }
 
-func (r *repository) SoftDeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error {
+func (r *repository) SoftDeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (int64, error) {
 	segment := util.StartTracer(ctx, tag, tracingSoftDeleteByID)
 	defer segment.End()
 
@@ -104,19 +109,26 @@ func (r *repository) SoftDeleteByID(ctx context.Context, db infrastructure.Queri
 	}).ToSql()
 	if err != nil {
 		util.ErrorLogger(r.logger, tag, tracingSoftDeleteByID, err)
-		return err
+		return 0, err
 	}
 
-	_, err = db.ExecContext(ctx, query, args...)
+	row, err := db.ExecContext(ctx, query, args...)
+
 	if err != nil {
 		util.ErrorLogger(r.logger, tag, tracingSoftDeleteByID, err)
-		return err
+		return 0, err
 	}
 
-	return nil
+	rowsAffected, err := row.RowsAffected()
+	if err != nil {
+		util.ErrorLogger(r.logger, tag, tracingUpdateByID, err)
+		return 0, err
+	}
+
+	return rowsAffected, nil
 }
 
-func (r *repository) DeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error {
+func (r *repository) DeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (int64, error) {
 	segment := util.StartTracer(ctx, tag, tracingDeleteByID)
 	defer segment.End()
 
@@ -125,14 +137,20 @@ func (r *repository) DeleteByID(ctx context.Context, db infrastructure.Querier, 
 	}).ToSql()
 	if err != nil {
 		util.ErrorLogger(r.logger, tag, tracingDeleteByID, err)
-		return err
+		return 0, err
 	}
 
-	_, err = db.ExecContext(ctx, query, args...)
+	row, err := db.ExecContext(ctx, query, args...)
 	if err != nil {
 		util.ErrorLogger(r.logger, tag, tracingDeleteByID, err)
-		return err
+		return 0, err
 	}
 
-	return nil
+	rowsAffected, err := row.RowsAffected()
+	if err != nil {
+		util.ErrorLogger(r.logger, tag, tracingUpdateByID, err)
+		return 0, err
+	}
+
+	return rowsAffected, nil
 }

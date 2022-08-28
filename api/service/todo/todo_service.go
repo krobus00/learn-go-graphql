@@ -83,7 +83,7 @@ func (svc *service) Show(ctx context.Context, payload *model.GetTodoByIDRequest)
 	return result, nil
 }
 
-func (svc *service) Update(ctx context.Context, payload *model.UpdateTodoByIDRequest) (*model.Todo, error) {
+func (svc *service) Update(ctx context.Context, payload *model.UpdateTodoByIDRequest) (bool, error) {
 	segment := util.StartTracer(ctx, tag, tracingUpdate)
 	defer segment.End()
 
@@ -95,10 +95,10 @@ func (svc *service) Update(ctx context.Context, payload *model.UpdateTodoByIDReq
 
 	todo, err := svc.repository.TodoRepostory.FindOneByID(ctx, svc.db, input)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	if todo == nil {
-		return nil, errors.New("todo not found")
+		return false, errors.New("todo not found")
 	}
 	payload = &model.UpdateTodoByIDRequest{
 		Text:   p.Sanitize(payload.Text),
@@ -110,16 +110,15 @@ func (svc *service) Update(ctx context.Context, payload *model.UpdateTodoByIDReq
 		Text:   payload.Text,
 		IsDone: payload.IsDone,
 	}
-	err = svc.repository.TodoRepostory.UpdateByID(ctx, svc.db, input)
+	rowsAffected, err := svc.repository.TodoRepostory.UpdateByID(ctx, svc.db, input)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	result := &model.Todo{
-		ID:     input.ID,
-		Text:   input.Text,
-		IsDone: input.IsDone,
+	if rowsAffected != 1 {
+		return false, errors.New("update todo failed")
 	}
-	return result, nil
+
+	return true, nil
 }
 
 func (svc *service) Delete(ctx context.Context, payload *model.DeleteTodoByIDRequest) (bool, error) {
@@ -142,15 +141,22 @@ func (svc *service) Delete(ctx context.Context, payload *model.DeleteTodoByIDReq
 	}
 
 	if util.PointerBoolToBool(payload.IsHardDelete) {
-		err = svc.repository.TodoRepostory.DeleteByID(ctx, svc.db, input)
+		rowsAffected, err := svc.repository.TodoRepostory.DeleteByID(ctx, svc.db, input)
 		if err != nil {
 			return false, err
 		}
+		if rowsAffected != 1 {
+			return false, errors.New("delete todo failed")
+		}
 		return true, nil
 	}
-	err = svc.repository.TodoRepostory.SoftDeleteByID(ctx, svc.db, input)
+
+	rowsAffected, err := svc.repository.TodoRepostory.SoftDeleteByID(ctx, svc.db, input)
 	if err != nil {
 		return false, err
+	}
+	if rowsAffected != 1 {
+		return false, errors.New("delete todo failed")
 	}
 
 	return true, nil

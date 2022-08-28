@@ -1,15 +1,25 @@
 # GraphQL schema example
 #
 # https://gqlgen.com/getting-started/
+scalar Map
+
+type Pagination {
+    Page: Int!
+    Limit: Int!
+    Search: String!
+    Filter: Map!
+}
 
 type Todo {
   id: ID!
   text: String!
   isDone: Boolean!
 }
+
 input GetTodoByIDRequest {
     id: ID!
 }
+
 type Query {
   todos: [Todo!]!
   todoByID(input: GetTodoByIDRequest!):Todo
@@ -36,6 +46,6 @@ input DeleteTodoByIDRequest {
 
 type Mutation {
   createTodo(input: CreateTodoRequest!): CreateTodoResponse!
-  updateTodoByID(input: UpdateTodoByIDRequest!): Todo!
+  updateTodoByID(input: UpdateTodoByIDRequest!): Boolean!
   deleteTodoByID(input: DeleteTodoByIDRequest!): Boolean!
 }

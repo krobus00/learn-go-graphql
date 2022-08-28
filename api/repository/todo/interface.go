@@ -25,9 +25,9 @@ type (
 		Store(ctx context.Context, db infrastructure.Querier, input *database.Todo) error
 		FindAll(ctx context.Context, db infrastructure.Querier) ([]*database.Todo, error)
 		FindOneByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (*database.Todo, error)
-		UpdateByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error
-		SoftDeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error
-		DeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) error
+		UpdateByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (int64, error)
+		SoftDeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (int64, error)
+		DeleteByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (int64, error)
 	}
 	repository struct {
 		logger *zap.Logger
