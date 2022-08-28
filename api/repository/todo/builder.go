@@ -7,6 +7,14 @@ import (
 	"github.com/krobus00/learn-go-graphql/api/model/database"
 )
 
+var (
+	searchFields = []string{
+		"id",
+		"text",
+		"is_done",
+	}
+)
+
 func (r *repository) buildInsertQuery(input *database.Todo) sq.InsertBuilder {
 	vals := sq.Eq{
 		"id":         input.ID,
@@ -38,7 +46,12 @@ func (r *repository) buildSoftDeleteQuery(input *database.Todo) sq.UpdateBuilder
 	return updateBuilder
 }
 
-func (r *repository) buildSelectQuery() sq.SelectBuilder {
+func (r *repository) buildDeleteQuery(input *database.Todo) sq.DeleteBuilder {
+	deleteBuilder := sq.Delete(r.GetTableName())
+	return deleteBuilder
+}
+
+func (r *repository) buildSelectQuery(input *database.Todo) sq.SelectBuilder {
 	selection := []string{
 		"id",
 		"text",
@@ -47,6 +60,22 @@ func (r *repository) buildSelectQuery() sq.SelectBuilder {
 		"updated_at",
 		"deleted_at",
 	}
-	selectBuilder := sq.Select(selection...).Where(sq.Eq{"deleted_at": nil}).From(r.GetTableName())
+	selectBuilder := sq.Select(selection...).From(r.GetTableName())
+	if input != nil && !input.IncludeSoftDelete {
+		selectBuilder = selectBuilder.Where(sq.Eq{"deleted_at": nil})
+	}
 	return selectBuilder
+}
+
+func (r *repository) buildSerachQuery(selectQuery sq.SelectBuilder, input string) sq.SelectBuilder {
+	search := "%" + input + "%"
+	var or []sq.Sqlizer
+
+	for _, field := range searchFields {
+		like := sq.Like{}
+		like[field] = search
+		or = append(or, like)
+	}
+
+	return selectQuery.Where(sq.Or(or))
 }

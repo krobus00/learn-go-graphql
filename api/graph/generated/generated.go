@@ -49,11 +49,22 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateTodo func(childComplexity int, input model.NewTodo) int
+		CreateTodo     func(childComplexity int, input model.CreateTodoRequest) int
+		DeleteTodoByID func(childComplexity int, input model.DeleteTodoByIDRequest) int
+		UpdateTodoByID func(childComplexity int, input model.UpdateTodoByIDRequest) int
+	}
+
+	PaginationResponse struct {
+		CurrentPage func(childComplexity int) int
+		Items       func(childComplexity int) int
+		Limit       func(childComplexity int) int
+		TotalItems  func(childComplexity int) int
+		TotalPages  func(childComplexity int) int
 	}
 
 	Query struct {
-		Todos func(childComplexity int) int
+		TodoByID func(childComplexity int, input model.GetTodoByIDRequest) int
+		Todos    func(childComplexity int, input model.PaginationRequest) int
 	}
 
 	Todo struct {
@@ -64,10 +75,13 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	CreateTodo(ctx context.Context, input model.NewTodo) (*model.CreateTodoResponse, error)
+	CreateTodo(ctx context.Context, input model.CreateTodoRequest) (*model.CreateTodoResponse, error)
+	UpdateTodoByID(ctx context.Context, input model.UpdateTodoByIDRequest) (bool, error)
+	DeleteTodoByID(ctx context.Context, input model.DeleteTodoByIDRequest) (bool, error)
 }
 type QueryResolver interface {
-	Todos(ctx context.Context) ([]*model.Todo, error)
+	Todos(ctx context.Context, input model.PaginationRequest) (*model.PaginationResponse, error)
+	TodoByID(ctx context.Context, input model.GetTodoByIDRequest) (*model.Todo, error)
 }
 
 type executableSchema struct {
@@ -102,14 +116,90 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateTodo(childComplexity, args["input"].(model.NewTodo)), true
+		return e.complexity.Mutation.CreateTodo(childComplexity, args["input"].(model.CreateTodoRequest)), true
+
+	case "Mutation.deleteTodoByID":
+		if e.complexity.Mutation.DeleteTodoByID == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteTodoByID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteTodoByID(childComplexity, args["input"].(model.DeleteTodoByIDRequest)), true
+
+	case "Mutation.updateTodoByID":
+		if e.complexity.Mutation.UpdateTodoByID == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateTodoByID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateTodoByID(childComplexity, args["input"].(model.UpdateTodoByIDRequest)), true
+
+	case "PaginationResponse.CurrentPage":
+		if e.complexity.PaginationResponse.CurrentPage == nil {
+			break
+		}
+
+		return e.complexity.PaginationResponse.CurrentPage(childComplexity), true
+
+	case "PaginationResponse.Items":
+		if e.complexity.PaginationResponse.Items == nil {
+			break
+		}
+
+		return e.complexity.PaginationResponse.Items(childComplexity), true
+
+	case "PaginationResponse.Limit":
+		if e.complexity.PaginationResponse.Limit == nil {
+			break
+		}
+
+		return e.complexity.PaginationResponse.Limit(childComplexity), true
+
+	case "PaginationResponse.TotalItems":
+		if e.complexity.PaginationResponse.TotalItems == nil {
+			break
+		}
+
+		return e.complexity.PaginationResponse.TotalItems(childComplexity), true
+
+	case "PaginationResponse.TotalPages":
+		if e.complexity.PaginationResponse.TotalPages == nil {
+			break
+		}
+
+		return e.complexity.PaginationResponse.TotalPages(childComplexity), true
+
+	case "Query.todoByID":
+		if e.complexity.Query.TodoByID == nil {
+			break
+		}
+
+		args, err := ec.field_Query_todoByID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.TodoByID(childComplexity, args["input"].(model.GetTodoByIDRequest)), true
 
 	case "Query.todos":
 		if e.complexity.Query.Todos == nil {
 			break
 		}
 
-		return e.complexity.Query.Todos(childComplexity), true
+		args, err := ec.field_Query_todos_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Todos(childComplexity, args["input"].(model.PaginationRequest)), true
 
 	case "Todo.id":
 		if e.complexity.Todo.ID == nil {
@@ -118,7 +208,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Todo.ID(childComplexity), true
 
-	case "Todo.is_done":
+	case "Todo.isDone":
 		if e.complexity.Todo.IsDone == nil {
 			break
 		}
@@ -140,7 +230,11 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
-		ec.unmarshalInputNewTodo,
+		ec.unmarshalInputCreateTodoRequest,
+		ec.unmarshalInputDeleteTodoByIDRequest,
+		ec.unmarshalInputGetTodoByIDRequest,
+		ec.unmarshalInputPaginationRequest,
+		ec.unmarshalInputUpdateTodoByIDRequest,
 	)
 	first := true
 
@@ -204,18 +298,39 @@ var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `# GraphQL schema example
 #
 # https://gqlgen.com/getting-started/
+scalar Map
 
 type Todo {
   id: ID!
   text: String!
-  is_done: Boolean!
+  isDone: Boolean!
+}
+
+input GetTodoByIDRequest {
+    id: ID!
+}
+
+input PaginationRequest {
+    Page: Int
+    Limit: Int
+    Search: String
+    Filter: Map
+}
+
+type PaginationResponse {
+    CurrentPage: Int!
+    TotalItems: Int!
+    Limit: Int!
+    TotalPages: Int!
+    Items: [Todo!]!
 }
 
 type Query {
-  todos: [Todo!]!
+  todos(input: PaginationRequest!): PaginationResponse!
+  todoByID(input: GetTodoByIDRequest!):Todo!
 }
 
-input NewTodo {
+input CreateTodoRequest {
   text: String!
 }
 
@@ -223,8 +338,21 @@ type CreateTodoResponse {
     id: ID!
 }
 
+input UpdateTodoByIDRequest {
+    id: ID!
+    text: String!
+    isDone: Boolean!
+}
+
+input DeleteTodoByIDRequest {
+    id: ID!
+    isHardDelete: Boolean
+}
+
 type Mutation {
-  createTodo(input: NewTodo!): CreateTodoResponse!
+  createTodo(input: CreateTodoRequest!): CreateTodoResponse!
+  updateTodoByID(input: UpdateTodoByIDRequest!): Boolean!
+  deleteTodoByID(input: DeleteTodoByIDRequest!): Boolean!
 }
 `, BuiltIn: false},
 }
@@ -237,10 +365,40 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_createTodo_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewTodo
+	var arg0 model.CreateTodoRequest
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewTodo2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐNewTodo(ctx, tmp)
+		arg0, err = ec.unmarshalNCreateTodoRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐCreateTodoRequest(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteTodoByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.DeleteTodoByIDRequest
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNDeleteTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐDeleteTodoByIDRequest(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateTodoByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.UpdateTodoByIDRequest
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNUpdateTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐUpdateTodoByIDRequest(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -261,6 +419,36 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_todoByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.GetTodoByIDRequest
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNGetTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐGetTodoByIDRequest(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_todos_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.PaginationRequest
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNPaginationRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationRequest(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -360,7 +548,7 @@ func (ec *executionContext) _Mutation_createTodo(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateTodo(rctx, fc.Args["input"].(model.NewTodo))
+		return ec.resolvers.Mutation().CreateTodo(rctx, fc.Args["input"].(model.CreateTodoRequest))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -405,8 +593,8 @@ func (ec *executionContext) fieldContext_Mutation_createTodo(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_todos(ctx, field)
+func (ec *executionContext) _Mutation_updateTodoByID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateTodoByID(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -419,7 +607,293 @@ func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.Coll
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Todos(rctx)
+		return ec.resolvers.Mutation().UpdateTodoByID(rctx, fc.Args["input"].(model.UpdateTodoByIDRequest))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateTodoByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateTodoByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteTodoByID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteTodoByID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteTodoByID(rctx, fc.Args["input"].(model.DeleteTodoByIDRequest))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteTodoByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteTodoByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaginationResponse_CurrentPage(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_CurrentPage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CurrentPage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PaginationResponse_CurrentPage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaginationResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaginationResponse_TotalItems(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_TotalItems(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TotalItems, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PaginationResponse_TotalItems(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaginationResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaginationResponse_Limit(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_Limit(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Limit, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PaginationResponse_Limit(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaginationResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaginationResponse_TotalPages(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_TotalPages(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TotalPages, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PaginationResponse_TotalPages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaginationResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaginationResponse_Items(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_Items(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Items, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -436,7 +910,126 @@ func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.Coll
 	return ec.marshalNTodo2ᚕᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodoᚄ(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) fieldContext_PaginationResponse_Items(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaginationResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Todo_id(ctx, field)
+			case "text":
+				return ec.fieldContext_Todo_text(ctx, field)
+			case "isDone":
+				return ec.fieldContext_Todo_isDone(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Todo", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_todos(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Todos(rctx, fc.Args["input"].(model.PaginationRequest))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PaginationResponse)
+	fc.Result = res
+	return ec.marshalNPaginationResponse2ᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationResponse(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) fieldContext_Query_todos(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "CurrentPage":
+				return ec.fieldContext_PaginationResponse_CurrentPage(ctx, field)
+			case "TotalItems":
+				return ec.fieldContext_PaginationResponse_TotalItems(ctx, field)
+			case "Limit":
+				return ec.fieldContext_PaginationResponse_Limit(ctx, field)
+			case "TotalPages":
+				return ec.fieldContext_PaginationResponse_TotalPages(ctx, field)
+			case "Items":
+				return ec.fieldContext_PaginationResponse_Items(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PaginationResponse", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_todos_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_todoByID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_todoByID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().TodoByID(rctx, fc.Args["input"].(model.GetTodoByIDRequest))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Todo)
+	fc.Result = res
+	return ec.marshalNTodo2ᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_todoByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -448,11 +1041,22 @@ func (ec *executionContext) fieldContext_Query_todos(ctx context.Context, field 
 				return ec.fieldContext_Todo_id(ctx, field)
 			case "text":
 				return ec.fieldContext_Todo_text(ctx, field)
-			case "is_done":
-				return ec.fieldContext_Todo_is_done(ctx, field)
+			case "isDone":
+				return ec.fieldContext_Todo_isDone(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Todo", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_todoByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
@@ -674,8 +1278,8 @@ func (ec *executionContext) fieldContext_Todo_text(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Todo_is_done(ctx context.Context, field graphql.CollectedField, obj *model.Todo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Todo_is_done(ctx, field)
+func (ec *executionContext) _Todo_isDone(ctx context.Context, field graphql.CollectedField, obj *model.Todo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Todo_isDone(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -705,7 +1309,7 @@ func (ec *executionContext) _Todo_is_done(ctx context.Context, field graphql.Col
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Todo_is_done(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Todo_isDone(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Todo",
 		Field:      field,
@@ -2491,8 +3095,8 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputNewTodo(ctx context.Context, obj interface{}) (model.NewTodo, error) {
-	var it model.NewTodo
+func (ec *executionContext) unmarshalInputCreateTodoRequest(ctx context.Context, obj interface{}) (model.CreateTodoRequest, error) {
+	var it model.CreateTodoRequest
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -2510,6 +3114,166 @@ func (ec *executionContext) unmarshalInputNewTodo(ctx context.Context, obj inter
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("text"))
 			it.Text, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputDeleteTodoByIDRequest(ctx context.Context, obj interface{}) (model.DeleteTodoByIDRequest, error) {
+	var it model.DeleteTodoByIDRequest
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "isHardDelete"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			it.ID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "isHardDelete":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isHardDelete"))
+			it.IsHardDelete, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputGetTodoByIDRequest(ctx context.Context, obj interface{}) (model.GetTodoByIDRequest, error) {
+	var it model.GetTodoByIDRequest
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			it.ID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPaginationRequest(ctx context.Context, obj interface{}) (model.PaginationRequest, error) {
+	var it model.PaginationRequest
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"Page", "Limit", "Search", "Filter"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "Page":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Page"))
+			it.Page, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Limit":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Limit"))
+			it.Limit, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Search":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Search"))
+			it.Search, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Filter":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Filter"))
+			it.Filter, err = ec.unmarshalOMap2map(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateTodoByIDRequest(ctx context.Context, obj interface{}) (model.UpdateTodoByIDRequest, error) {
+	var it model.UpdateTodoByIDRequest
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "text", "isDone"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			it.ID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "text":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("text"))
+			it.Text, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "isDone":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isDone"))
+			it.IsDone, err = ec.unmarshalNBoolean2bool(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2583,6 +3347,80 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "updateTodoByID":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateTodoByID(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteTodoByID":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteTodoByID(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var paginationResponseImplementors = []string{"PaginationResponse"}
+
+func (ec *executionContext) _PaginationResponse(ctx context.Context, sel ast.SelectionSet, obj *model.PaginationResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, paginationResponseImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PaginationResponse")
+		case "CurrentPage":
+
+			out.Values[i] = ec._PaginationResponse_CurrentPage(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "TotalItems":
+
+			out.Values[i] = ec._PaginationResponse_TotalItems(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "Limit":
+
+			out.Values[i] = ec._PaginationResponse_Limit(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "TotalPages":
+
+			out.Values[i] = ec._PaginationResponse_TotalPages(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "Items":
+
+			out.Values[i] = ec._PaginationResponse_Items(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2623,6 +3461,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_todos(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "todoByID":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_todoByID(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -2683,9 +3544,9 @@ func (ec *executionContext) _Todo(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "is_done":
+		case "isDone":
 
-			out.Values[i] = ec._Todo_is_done(ctx, field, obj)
+			out.Values[i] = ec._Todo_isDone(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -3034,6 +3895,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) unmarshalNCreateTodoRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐCreateTodoRequest(ctx context.Context, v interface{}) (model.CreateTodoRequest, error) {
+	res, err := ec.unmarshalInputCreateTodoRequest(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNCreateTodoResponse2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐCreateTodoResponse(ctx context.Context, sel ast.SelectionSet, v model.CreateTodoResponse) graphql.Marshaler {
 	return ec._CreateTodoResponse(ctx, sel, &v)
 }
@@ -3046,6 +3912,16 @@ func (ec *executionContext) marshalNCreateTodoResponse2ᚖgithubᚗcomᚋkrobus0
 		return graphql.Null
 	}
 	return ec._CreateTodoResponse(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNDeleteTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐDeleteTodoByIDRequest(ctx context.Context, v interface{}) (model.DeleteTodoByIDRequest, error) {
+	res, err := ec.unmarshalInputDeleteTodoByIDRequest(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNGetTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐGetTodoByIDRequest(ctx context.Context, v interface{}) (model.GetTodoByIDRequest, error) {
+	res, err := ec.unmarshalInputGetTodoByIDRequest(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
@@ -3063,9 +3939,38 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 	return res
 }
 
-func (ec *executionContext) unmarshalNNewTodo2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐNewTodo(ctx context.Context, v interface{}) (model.NewTodo, error) {
-	res, err := ec.unmarshalInputNewTodo(ctx, v)
+func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
+	res, err := graphql.UnmarshalInt(v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	res := graphql.MarshalInt(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNPaginationRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationRequest(ctx context.Context, v interface{}) (model.PaginationRequest, error) {
+	res, err := ec.unmarshalInputPaginationRequest(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPaginationResponse2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationResponse(ctx context.Context, sel ast.SelectionSet, v model.PaginationResponse) graphql.Marshaler {
+	return ec._PaginationResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPaginationResponse2ᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationResponse(ctx context.Context, sel ast.SelectionSet, v *model.PaginationResponse) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PaginationResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -3081,6 +3986,10 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNTodo2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodo(ctx context.Context, sel ast.SelectionSet, v model.Todo) graphql.Marshaler {
+	return ec._Todo(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNTodo2ᚕᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodoᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Todo) graphql.Marshaler {
@@ -3135,6 +4044,11 @@ func (ec *executionContext) marshalNTodo2ᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgo
 		return graphql.Null
 	}
 	return ec._Todo(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNUpdateTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐUpdateTodoByIDRequest(ctx context.Context, v interface{}) (model.UpdateTodoByIDRequest, error) {
+	res, err := ec.unmarshalInputUpdateTodoByIDRequest(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -3413,6 +4327,38 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	res := graphql.MarshalBoolean(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalInt(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalMap(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalMap(v)
 	return res
 }
 

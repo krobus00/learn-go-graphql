@@ -12,13 +12,28 @@ import (
 )
 
 // CreateTodo is the resolver for the createTodo field.
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.CreateTodoResponse, error) {
+func (r *mutationResolver) CreateTodo(ctx context.Context, input model.CreateTodoRequest) (*model.CreateTodoResponse, error) {
 	panic(fmt.Errorf("not implemented: CreateTodo - createTodo"))
 }
 
+// UpdateTodoByID is the resolver for the updateTodoByID field.
+func (r *mutationResolver) UpdateTodoByID(ctx context.Context, input model.UpdateTodoByIDRequest) (bool, error) {
+	panic(fmt.Errorf("not implemented: UpdateTodoByID - updateTodoByID"))
+}
+
+// DeleteTodoByID is the resolver for the deleteTodoByID field.
+func (r *mutationResolver) DeleteTodoByID(ctx context.Context, input model.DeleteTodoByIDRequest) (bool, error) {
+	panic(fmt.Errorf("not implemented: DeleteTodoByID - deleteTodoByID"))
+}
+
 // Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
+func (r *queryResolver) Todos(ctx context.Context, input model.PaginationRequest) (*model.PaginationResponse, error) {
 	panic(fmt.Errorf("not implemented: Todos - todos"))
+}
+
+// TodoByID is the resolver for the todoByID field.
+func (r *queryResolver) TodoByID(ctx context.Context, input model.GetTodoByIDRequest) (*model.Todo, error) {
+	panic(fmt.Errorf("not implemented: TodoByID - todoByID"))
 }
 
 // Mutation returns generated.MutationResolver implementation.

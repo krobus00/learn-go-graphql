@@ -1,3 +1,4 @@
+//go:generate go get github.com/99designs/gqlgen@v0.17.16
 //go:generate go run github.com/99designs/gqlgen generate
 
 package graph

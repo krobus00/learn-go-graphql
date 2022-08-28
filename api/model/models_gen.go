@@ -2,16 +2,46 @@
 
 package model
 
+type CreateTodoRequest struct {
+	Text string `json:"text"`
+}
+
 type CreateTodoResponse struct {
 	ID string `json:"id"`
 }
 
-type NewTodo struct {
-	Text string `json:"text"`
+type DeleteTodoByIDRequest struct {
+	ID           string `json:"id"`
+	IsHardDelete *bool  `json:"isHardDelete"`
+}
+
+type GetTodoByIDRequest struct {
+	ID string `json:"id"`
+}
+
+type PaginationRequest struct {
+	Page   *int                   `json:"Page"`
+	Limit  *int                   `json:"Limit"`
+	Search *string                `json:"Search"`
+	Filter map[string]interface{} `json:"Filter"`
+}
+
+type PaginationResponse struct {
+	CurrentPage int     `json:"CurrentPage"`
+	TotalItems  int     `json:"TotalItems"`
+	Limit       int     `json:"Limit"`
+	TotalPages  int     `json:"TotalPages"`
+	Items       []*Todo `json:"Items"`
 }
 
 type Todo struct {
 	ID     string `json:"id"`
 	Text   string `json:"text"`
-	IsDone bool   `json:"is_done"`
+	IsDone bool   `json:"isDone"`
+}
+
+type UpdateTodoByIDRequest struct {
+	ID     string `json:"id"`
+	Text   string `json:"text"`
+	IsDone bool   `json:"isDone"`
 }
