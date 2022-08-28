@@ -23,7 +23,7 @@ const (
 
 type (
 	TodoService interface {
-		FindAll(ctx context.Context) ([]*model.Todo, error)
+		FindAll(ctx context.Context, payload *model.PaginationRequest) (*model.PaginationResponse, error)
 		Store(ctx context.Context, payload *model.CreateTodoRequest) (*model.CreateTodoResponse, error)
 		Show(ctx context.Context, payload *model.GetTodoByIDRequest) (*model.Todo, error)
 		Update(ctx context.Context, payload *model.UpdateTodoByIDRequest) (bool, error)

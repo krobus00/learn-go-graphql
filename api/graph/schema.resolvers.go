@@ -38,11 +38,10 @@ func (r *mutationResolver) UpdateTodoByID(ctx context.Context, input model.Updat
 
 type queryResolver struct{ *Resolver }
 
-// Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	todos, err := r.Service.TodoService.FindAll(ctx)
-
-	return todos, err
+// Todos implements generated.QueryResolver
+func (r *queryResolver) Todos(ctx context.Context, input model.PaginationRequest) (*model.PaginationResponse, error) {
+	results, err := r.Service.TodoService.FindAll(ctx, &input)
+	return results, err
 }
 
 // TodoByID implements generated.QueryResolver

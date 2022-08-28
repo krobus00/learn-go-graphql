@@ -54,16 +54,17 @@ type ComplexityRoot struct {
 		UpdateTodoByID func(childComplexity int, input model.UpdateTodoByIDRequest) int
 	}
 
-	Pagination struct {
-		Filter func(childComplexity int) int
-		Limit  func(childComplexity int) int
-		Page   func(childComplexity int) int
-		Search func(childComplexity int) int
+	PaginationResponse struct {
+		CurrentPage func(childComplexity int) int
+		Items       func(childComplexity int) int
+		Limit       func(childComplexity int) int
+		TotalItems  func(childComplexity int) int
+		TotalPages  func(childComplexity int) int
 	}
 
 	Query struct {
 		TodoByID func(childComplexity int, input model.GetTodoByIDRequest) int
-		Todos    func(childComplexity int) int
+		Todos    func(childComplexity int, input model.PaginationRequest) int
 	}
 
 	Todo struct {
@@ -79,7 +80,7 @@ type MutationResolver interface {
 	DeleteTodoByID(ctx context.Context, input model.DeleteTodoByIDRequest) (bool, error)
 }
 type QueryResolver interface {
-	Todos(ctx context.Context) ([]*model.Todo, error)
+	Todos(ctx context.Context, input model.PaginationRequest) (*model.PaginationResponse, error)
 	TodoByID(ctx context.Context, input model.GetTodoByIDRequest) (*model.Todo, error)
 }
 
@@ -141,33 +142,40 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateTodoByID(childComplexity, args["input"].(model.UpdateTodoByIDRequest)), true
 
-	case "Pagination.Filter":
-		if e.complexity.Pagination.Filter == nil {
+	case "PaginationResponse.CurrentPage":
+		if e.complexity.PaginationResponse.CurrentPage == nil {
 			break
 		}
 
-		return e.complexity.Pagination.Filter(childComplexity), true
+		return e.complexity.PaginationResponse.CurrentPage(childComplexity), true
 
-	case "Pagination.Limit":
-		if e.complexity.Pagination.Limit == nil {
+	case "PaginationResponse.Items":
+		if e.complexity.PaginationResponse.Items == nil {
 			break
 		}
 
-		return e.complexity.Pagination.Limit(childComplexity), true
+		return e.complexity.PaginationResponse.Items(childComplexity), true
 
-	case "Pagination.Page":
-		if e.complexity.Pagination.Page == nil {
+	case "PaginationResponse.Limit":
+		if e.complexity.PaginationResponse.Limit == nil {
 			break
 		}
 
-		return e.complexity.Pagination.Page(childComplexity), true
+		return e.complexity.PaginationResponse.Limit(childComplexity), true
 
-	case "Pagination.Search":
-		if e.complexity.Pagination.Search == nil {
+	case "PaginationResponse.TotalItems":
+		if e.complexity.PaginationResponse.TotalItems == nil {
 			break
 		}
 
-		return e.complexity.Pagination.Search(childComplexity), true
+		return e.complexity.PaginationResponse.TotalItems(childComplexity), true
+
+	case "PaginationResponse.TotalPages":
+		if e.complexity.PaginationResponse.TotalPages == nil {
+			break
+		}
+
+		return e.complexity.PaginationResponse.TotalPages(childComplexity), true
 
 	case "Query.todoByID":
 		if e.complexity.Query.TodoByID == nil {
@@ -186,7 +194,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Todos(childComplexity), true
+		args, err := ec.field_Query_todos_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Todos(childComplexity, args["input"].(model.PaginationRequest)), true
 
 	case "Todo.id":
 		if e.complexity.Todo.ID == nil {
@@ -220,6 +233,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateTodoRequest,
 		ec.unmarshalInputDeleteTodoByIDRequest,
 		ec.unmarshalInputGetTodoByIDRequest,
+		ec.unmarshalInputPaginationRequest,
 		ec.unmarshalInputUpdateTodoByIDRequest,
 	)
 	first := true
@@ -286,13 +300,6 @@ var sources = []*ast.Source{
 # https://gqlgen.com/getting-started/
 scalar Map
 
-type Pagination {
-    Page: Int!
-    Limit: Int!
-    Search: String!
-    Filter: Map!
-}
-
 type Todo {
   id: ID!
   text: String!
@@ -303,9 +310,24 @@ input GetTodoByIDRequest {
     id: ID!
 }
 
+input PaginationRequest {
+    Page: Int
+    Limit: Int
+    Search: String
+    Filter: Map
+}
+
+type PaginationResponse {
+    CurrentPage: Int!
+    TotalItems: Int!
+    Limit: Int!
+    TotalPages: Int!
+    Items: [Todo!]!
+}
+
 type Query {
-  todos: [Todo!]!
-  todoByID(input: GetTodoByIDRequest!):Todo
+  todos(input: PaginationRequest!): PaginationResponse!
+  todoByID(input: GetTodoByIDRequest!):Todo!
 }
 
 input CreateTodoRequest {
@@ -407,6 +429,21 @@ func (ec *executionContext) field_Query_todoByID_args(ctx context.Context, rawAr
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
 		arg0, err = ec.unmarshalNGetTodoByIDRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐGetTodoByIDRequest(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_todos_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.PaginationRequest
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNPaginationRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationRequest(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -666,8 +703,8 @@ func (ec *executionContext) fieldContext_Mutation_deleteTodoByID(ctx context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _Pagination_Page(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Pagination_Page(ctx, field)
+func (ec *executionContext) _PaginationResponse_CurrentPage(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_CurrentPage(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -680,7 +717,7 @@ func (ec *executionContext) _Pagination_Page(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Page, nil
+		return obj.CurrentPage, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -697,9 +734,9 @@ func (ec *executionContext) _Pagination_Page(ctx context.Context, field graphql.
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Pagination_Page(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PaginationResponse_CurrentPage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Pagination",
+		Object:     "PaginationResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -710,8 +747,52 @@ func (ec *executionContext) fieldContext_Pagination_Page(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Pagination_Limit(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Pagination_Limit(ctx, field)
+func (ec *executionContext) _PaginationResponse_TotalItems(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_TotalItems(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TotalItems, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PaginationResponse_TotalItems(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaginationResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaginationResponse_Limit(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_Limit(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -741,9 +822,9 @@ func (ec *executionContext) _Pagination_Limit(ctx context.Context, field graphql
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Pagination_Limit(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PaginationResponse_Limit(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Pagination",
+		Object:     "PaginationResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -754,8 +835,8 @@ func (ec *executionContext) fieldContext_Pagination_Limit(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Pagination_Search(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Pagination_Search(ctx, field)
+func (ec *executionContext) _PaginationResponse_TotalPages(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_TotalPages(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -768,7 +849,7 @@ func (ec *executionContext) _Pagination_Search(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Search, nil
+		return obj.TotalPages, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -780,26 +861,26 @@ func (ec *executionContext) _Pagination_Search(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Pagination_Search(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PaginationResponse_TotalPages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Pagination",
+		Object:     "PaginationResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Pagination_Filter(ctx context.Context, field graphql.CollectedField, obj *model.Pagination) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Pagination_Filter(ctx, field)
+func (ec *executionContext) _PaginationResponse_Items(ctx context.Context, field graphql.CollectedField, obj *model.PaginationResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PaginationResponse_Items(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -812,7 +893,7 @@ func (ec *executionContext) _Pagination_Filter(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Filter, nil
+		return obj.Items, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -824,19 +905,27 @@ func (ec *executionContext) _Pagination_Filter(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(map[string]interface{})
+	res := resTmp.([]*model.Todo)
 	fc.Result = res
-	return ec.marshalNMap2map(ctx, field.Selections, res)
+	return ec.marshalNTodo2ᚕᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodoᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Pagination_Filter(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PaginationResponse_Items(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Pagination",
+		Object:     "PaginationResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Map does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Todo_id(ctx, field)
+			case "text":
+				return ec.fieldContext_Todo_text(ctx, field)
+			case "isDone":
+				return ec.fieldContext_Todo_isDone(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Todo", field.Name)
 		},
 	}
 	return fc, nil
@@ -856,7 +945,7 @@ func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.Coll
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Todos(rctx)
+		return ec.resolvers.Query().Todos(rctx, fc.Args["input"].(model.PaginationRequest))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -868,9 +957,9 @@ func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Todo)
+	res := resTmp.(*model.PaginationResponse)
 	fc.Result = res
-	return ec.marshalNTodo2ᚕᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodoᚄ(ctx, field.Selections, res)
+	return ec.marshalNPaginationResponse2ᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_todos(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -881,15 +970,30 @@ func (ec *executionContext) fieldContext_Query_todos(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Todo_id(ctx, field)
-			case "text":
-				return ec.fieldContext_Todo_text(ctx, field)
-			case "isDone":
-				return ec.fieldContext_Todo_isDone(ctx, field)
+			case "CurrentPage":
+				return ec.fieldContext_PaginationResponse_CurrentPage(ctx, field)
+			case "TotalItems":
+				return ec.fieldContext_PaginationResponse_TotalItems(ctx, field)
+			case "Limit":
+				return ec.fieldContext_PaginationResponse_Limit(ctx, field)
+			case "TotalPages":
+				return ec.fieldContext_PaginationResponse_TotalPages(ctx, field)
+			case "Items":
+				return ec.fieldContext_PaginationResponse_Items(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Todo", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PaginationResponse", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_todos_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
@@ -915,11 +1019,14 @@ func (ec *executionContext) _Query_todoByID(ctx context.Context, field graphql.C
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.Todo)
 	fc.Result = res
-	return ec.marshalOTodo2ᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodo(ctx, field.Selections, res)
+	return ec.marshalNTodo2ᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_todoByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3080,6 +3187,58 @@ func (ec *executionContext) unmarshalInputGetTodoByIDRequest(ctx context.Context
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputPaginationRequest(ctx context.Context, obj interface{}) (model.PaginationRequest, error) {
+	var it model.PaginationRequest
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"Page", "Limit", "Search", "Filter"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "Page":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Page"))
+			it.Page, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Limit":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Limit"))
+			it.Limit, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Search":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Search"))
+			it.Search, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Filter":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Filter"))
+			it.Filter, err = ec.unmarshalOMap2map(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateTodoByIDRequest(ctx context.Context, obj interface{}) (model.UpdateTodoByIDRequest, error) {
 	var it model.UpdateTodoByIDRequest
 	asMap := map[string]interface{}{}
@@ -3217,40 +3376,47 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
-var paginationImplementors = []string{"Pagination"}
+var paginationResponseImplementors = []string{"PaginationResponse"}
 
-func (ec *executionContext) _Pagination(ctx context.Context, sel ast.SelectionSet, obj *model.Pagination) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, paginationImplementors)
+func (ec *executionContext) _PaginationResponse(ctx context.Context, sel ast.SelectionSet, obj *model.PaginationResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, paginationResponseImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("Pagination")
-		case "Page":
+			out.Values[i] = graphql.MarshalString("PaginationResponse")
+		case "CurrentPage":
 
-			out.Values[i] = ec._Pagination_Page(ctx, field, obj)
+			out.Values[i] = ec._PaginationResponse_CurrentPage(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "TotalItems":
+
+			out.Values[i] = ec._PaginationResponse_TotalItems(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "Limit":
 
-			out.Values[i] = ec._Pagination_Limit(ctx, field, obj)
+			out.Values[i] = ec._PaginationResponse_Limit(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "Search":
+		case "TotalPages":
 
-			out.Values[i] = ec._Pagination_Search(ctx, field, obj)
+			out.Values[i] = ec._PaginationResponse_TotalPages(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "Filter":
+		case "Items":
 
-			out.Values[i] = ec._Pagination_Filter(ctx, field, obj)
+			out.Values[i] = ec._PaginationResponse_Items(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -3318,6 +3484,9 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_todoByID(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			}
 
@@ -3785,25 +3954,23 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
-	res, err := graphql.UnmarshalMap(v)
+func (ec *executionContext) unmarshalNPaginationRequest2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationRequest(ctx context.Context, v interface{}) (model.PaginationRequest, error) {
+	res, err := ec.unmarshalInputPaginationRequest(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
+func (ec *executionContext) marshalNPaginationResponse2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationResponse(ctx context.Context, sel ast.SelectionSet, v model.PaginationResponse) graphql.Marshaler {
+	return ec._PaginationResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPaginationResponse2ᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐPaginationResponse(ctx context.Context, sel ast.SelectionSet, v *model.PaginationResponse) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	res := graphql.MarshalMap(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
+	return ec._PaginationResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -3819,6 +3986,10 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNTodo2githubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodo(ctx context.Context, sel ast.SelectionSet, v model.Todo) graphql.Marshaler {
+	return ec._Todo(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNTodo2ᚕᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodoᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Todo) graphql.Marshaler {
@@ -4159,6 +4330,38 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalInt(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalMap(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalMap(v)
+	return res
+}
+
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
 	if v == nil {
 		return nil, nil
@@ -4173,13 +4376,6 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	}
 	res := graphql.MarshalString(*v)
 	return res
-}
-
-func (ec *executionContext) marshalOTodo2ᚖgithubᚗcomᚋkrobus00ᚋlearnᚑgoᚑgraphqlᚋapiᚋmodelᚐTodo(ctx context.Context, sel ast.SelectionSet, v *model.Todo) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Todo(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/krobus00/learn-go-graphql/api/model"
 	"github.com/krobus00/learn-go-graphql/api/model/database"
 	"github.com/krobus00/learn-go-graphql/infrastructure"
 	"github.com/krobus00/learn-go-graphql/util"
@@ -27,13 +28,35 @@ func (r *repository) Store(ctx context.Context, db infrastructure.Querier, input
 	return nil
 }
 
-func (r *repository) FindAll(ctx context.Context, db infrastructure.Querier) ([]*database.Todo, error) {
+func (r *repository) FindAll(ctx context.Context, db infrastructure.Querier, input *model.PaginationRequest) ([]*database.Todo, error) {
 	segment := util.StartTracer(ctx, tag, tracingFindAll)
 	defer segment.End()
 
 	results := make([]*database.Todo, 0)
 
-	query, args, err := r.buildSelectQuery(nil).ToSql()
+	filterInput := &database.Todo{
+		BaseData: database.BaseData{
+			IncludeSoftDelete: false,
+		},
+	}
+
+	if x, found := input.Filter["IncludeSoftDelete"]; found {
+		if isIncluded, ok := x.(bool); ok {
+			filterInput.IncludeSoftDelete = isIncluded
+		}
+	}
+
+	paginationQuery := r.buildSelectQuery(filterInput).Limit(uint64(*input.Limit))
+
+	if *input.Page > 1 {
+		paginationQuery = paginationQuery.Offset(uint64(*input.Page-1) * uint64(*input.Limit))
+	}
+
+	if input.Search != nil && *input.Search != "" {
+		paginationQuery = r.buildSerachQuery(paginationQuery, *input.Search)
+	}
+
+	query, args, err := paginationQuery.ToSql()
 	if err != nil {
 		util.ErrorLogger(r.logger, tag, tracingFindAll, err)
 		return results, err
@@ -46,6 +69,47 @@ func (r *repository) FindAll(ctx context.Context, db infrastructure.Querier) ([]
 	}
 
 	return results, nil
+}
+
+func (r *repository) Count(ctx context.Context, db infrastructure.Querier, input *model.PaginationRequest) (uint64, error) {
+	segment := util.StartTracer(ctx, tag, tracingCount)
+	defer segment.End()
+
+	var totalItem uint64
+
+	filterInput := &database.Todo{
+		BaseData: database.BaseData{
+			IncludeSoftDelete: false,
+		},
+	}
+
+	if x, found := input.Filter["IncludeSoftDelete"]; found {
+		if isIncluded, ok := x.(bool); ok {
+			filterInput.IncludeSoftDelete = isIncluded
+		}
+	}
+
+	paginationQuery := r.buildSelectQuery(filterInput)
+
+	if input.Search != nil && *input.Search != "" {
+		paginationQuery = r.buildSerachQuery(paginationQuery, *input.Search)
+	}
+
+	query, args, err := squirrel.Select("count(*)").FromSelect(paginationQuery, "c").ToSql()
+	if err != nil {
+		util.ErrorLogger(r.logger, tag, tracingCount, err)
+		return 0, err
+	}
+
+	err = db.GetContext(ctx, &totalItem, query, args...)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, nil
+		}
+		util.ErrorLogger(r.logger, tag, tracingCount, err)
+		return 0, err
+	}
+	return totalItem, nil
 }
 
 func (r *repository) FindOneByID(ctx context.Context, db infrastructure.Querier, input *database.Todo) (*database.Todo, error) {

@@ -1,0 +1,9 @@
+package constant
+
+var (
+	DEFAULT_PAGINATION_LIMIT = 10
+	MAX_PAGINATION_LIMIT     = 50
+	MIN_PAGINATION_LIMIT     = 5
+
+	DEFAULT_PAGE = 1
+)

@@ -7,6 +7,14 @@ import (
 	"github.com/krobus00/learn-go-graphql/api/model/database"
 )
 
+var (
+	searchFields = []string{
+		"id",
+		"text",
+		"is_done",
+	}
+)
+
 func (r *repository) buildInsertQuery(input *database.Todo) sq.InsertBuilder {
 	vals := sq.Eq{
 		"id":         input.ID,
@@ -57,4 +65,17 @@ func (r *repository) buildSelectQuery(input *database.Todo) sq.SelectBuilder {
 		selectBuilder = selectBuilder.Where(sq.Eq{"deleted_at": nil})
 	}
 	return selectBuilder
+}
+
+func (r *repository) buildSerachQuery(selectQuery sq.SelectBuilder, input string) sq.SelectBuilder {
+	search := "%" + input + "%"
+	var or []sq.Sqlizer
+
+	for _, field := range searchFields {
+		like := sq.Like{}
+		like[field] = search
+		or = append(or, like)
+	}
+
+	return selectQuery.Where(sq.Or(or))
 }

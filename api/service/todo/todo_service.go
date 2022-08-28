@@ -37,15 +37,24 @@ func (svc *service) Store(ctx context.Context, payload *model.CreateTodoRequest)
 	return result, nil
 }
 
-func (svc *service) FindAll(ctx context.Context) ([]*model.Todo, error) {
+func (svc *service) FindAll(ctx context.Context, payload *model.PaginationRequest) (*model.PaginationResponse, error) {
 	segment := util.StartTracer(ctx, tag, tracingFindAll)
 	defer segment.End()
 
+	payload.Sanitize()
+
 	results := make([]*model.Todo, 0)
 
-	todos, err := svc.repository.TodoRepostory.FindAll(ctx, svc.db)
+	resp := new(model.PaginationResponse)
+
+	count, err := svc.repository.TodoRepostory.Count(ctx, svc.db, payload)
 	if err != nil {
-		return results, err
+		return resp, err
+	}
+
+	todos, err := svc.repository.TodoRepostory.FindAll(ctx, svc.db, payload)
+	if err != nil {
+		return resp, err
 	}
 
 	for _, v := range todos {
@@ -56,7 +65,10 @@ func (svc *service) FindAll(ctx context.Context) ([]*model.Todo, error) {
 		})
 	}
 
-	return results, nil
+	resp.Items = results
+	resp.BuildResponse(payload, count)
+
+	return resp, nil
 }
 
 func (svc *service) Show(ctx context.Context, payload *model.GetTodoByIDRequest) (*model.Todo, error) {

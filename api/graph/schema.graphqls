@@ -3,13 +3,6 @@
 # https://gqlgen.com/getting-started/
 scalar Map
 
-type Pagination {
-    Page: Int!
-    Limit: Int!
-    Search: String!
-    Filter: Map!
-}
-
 type Todo {
   id: ID!
   text: String!
@@ -20,9 +13,24 @@ input GetTodoByIDRequest {
     id: ID!
 }
 
+input PaginationRequest {
+    Page: Int
+    Limit: Int
+    Search: String
+    Filter: Map
+}
+
+type PaginationResponse {
+    CurrentPage: Int!
+    TotalItems: Int!
+    Limit: Int!
+    TotalPages: Int!
+    Items: [Todo!]!
+}
+
 type Query {
-  todos: [Todo!]!
-  todoByID(input: GetTodoByIDRequest!):Todo
+  todos(input: PaginationRequest!): PaginationResponse!
+  todoByID(input: GetTodoByIDRequest!):Todo!
 }
 
 input CreateTodoRequest {
