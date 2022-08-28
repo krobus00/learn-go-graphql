@@ -17,7 +17,7 @@ func (r *mutationResolver) CreateTodo(ctx context.Context, input model.CreateTod
 }
 
 // UpdateTodoByID is the resolver for the updateTodoByID field.
-func (r *mutationResolver) UpdateTodoByID(ctx context.Context, input model.UpdateTodoByIDRequest) (*model.Todo, error) {
+func (r *mutationResolver) UpdateTodoByID(ctx context.Context, input model.UpdateTodoByIDRequest) (bool, error) {
 	panic(fmt.Errorf("not implemented: UpdateTodoByID - updateTodoByID"))
 }
 

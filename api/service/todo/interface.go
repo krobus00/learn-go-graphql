@@ -26,7 +26,7 @@ type (
 		FindAll(ctx context.Context) ([]*model.Todo, error)
 		Store(ctx context.Context, payload *model.CreateTodoRequest) (*model.CreateTodoResponse, error)
 		Show(ctx context.Context, payload *model.GetTodoByIDRequest) (*model.Todo, error)
-		Update(ctx context.Context, payload *model.UpdateTodoByIDRequest) (*model.Todo, error)
+		Update(ctx context.Context, payload *model.UpdateTodoByIDRequest) (bool, error)
 		Delete(ctx context.Context, payload *model.DeleteTodoByIDRequest) (bool, error)
 	}
 	service struct {

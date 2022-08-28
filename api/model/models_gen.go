@@ -19,6 +19,13 @@ type GetTodoByIDRequest struct {
 	ID string `json:"id"`
 }
 
+type Pagination struct {
+	Page   int                    `json:"Page"`
+	Limit  int                    `json:"Limit"`
+	Search string                 `json:"Search"`
+	Filter map[string]interface{} `json:"Filter"`
+}
+
 type Todo struct {
 	ID     string `json:"id"`
 	Text   string `json:"text"`
